@@ -27,13 +27,6 @@ to setup
 end
 
 
-to go
-  ask leiders [
-    show count voters in-radius 10
-]
-end
-
-
 to plurarity
   ask voters [
     ask min-one-of leiders [distance myself] [
