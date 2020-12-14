@@ -12,22 +12,47 @@ to setup
   create-stemmers voters
   ask stemmers [
     setxy random-xcor random-ycor
-    set color blue
+    set color white
+    set size 2
     set shape "person"
   ]
+
+  let kleur (list orange blue green yellow brown)
 
   ;; Creër leiders
   create-leiders leaders [
     setxy random-xcor random-ycor
     set volgers 0
-    set size 3
-    set color orange
+    set size 4
+
     set shape "person"
+    set color item 0 kleur
+    set kleur remove-item 0 kleur
   ]
 
   ;; Welke andere leider lijkt het meest op jou
   ask leiders [
     set nearest_neighbor min-one-of other leiders [distance myself]
+  ]
+
+  ask stemmers [
+    set approve min-one-of leiders [distance myself]
+  ]
+
+  ask patches [
+    set pcolor 2.0
+  ]
+
+  ask patches [if pxcor = 0 [
+    show "whatdown"
+    set pcolor 7.0
+    ]
+  ]
+
+  ask patches [if pycor = 0 [
+    show "whatup"
+    set pcolor 7.0
+    ]
   ]
 end
 
@@ -39,9 +64,13 @@ to plurarity
   ]
 
   ask stemmers [
-    ask min-one-of leiders [distance myself] [
+    let vote min-one-of leiders [distance myself]
+    let kleur green
+    ask vote [
       set volgers volgers + 1
+      set kleur color
     ]
+    set color kleur
   ]
 
   ask leiders [
@@ -63,13 +92,32 @@ to instant_runoff
     ]
   ]
 
+  let vote 0
+  let kleur green
+
   ask min-one-of leiders [volgers] [
     let lowest volgers
-
-    ask nearest_neighbor [
+    set vote nearest_neighbor
+    ask vote [
       set volgers volgers + lowest
+      set kleur color
     ]
     set volgers 0
+  ]
+
+  ask stemmers [
+    let voter min-one-of leiders [distance myself]
+    set approve voter
+    if approve = min-one-of leiders [volgers] [
+      show "lol"
+      set approve vote
+    ]
+
+    ask approve [
+      set kleur color
+    ]
+
+    set color kleur
   ]
 
   ask leiders [
@@ -82,6 +130,10 @@ end
 to approval
   ;; Hier zullen voters aangeven welke leider dichtbij genoeg hun views zitten om op te stemmen, dit kunnen dus meerdere leiders zijn. De leider die het meest approved is, wint.
   ;; Als een voter approved op alle leiders, zal hij niet meer approven op de leider die het minst op hem lijkt. Dit geeft zijn andere favoriete leiders een hogere kans om te winnen.
+  ask stemmers [
+    set color white
+  ]
+
   ask stemmers [
     create-links-with leiders in-radius 20
   ]
@@ -99,8 +151,8 @@ end
 GRAPHICS-WINDOW
 247
 45
-684
-483
+918
+717
 -1
 -1
 13.0
@@ -113,10 +165,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--16
-16
--16
-16
+-25
+25
+-25
+25
 0
 0
 1
@@ -239,8 +291,6 @@ Approval:        Hier zullen voters aangeven welke leider dichtbij genoeg hun vi
 
 Eerst kan je instellen hoeveel leiders en hoeveel voters je wil hebben door middel van de sliders. Wanneer dit klaar is, klik je op 'setup'. Nu zullen je stemmers en je leiders random over het veld verspreidt worden. Dit veld kan je zien als een politiek kompas waar beide horizontale en verticale vlakken een tegenovergesteld politiek beeld is. 
 Dan zijn er nog drie knoppen over: "plurarity", "instant_runoff" en "approval". Wanneer je op één van die knoppen klikt zal je het resultaat van deze stemtactiek te zien krijgen. 
-
-
 @#$#@#$#@
 default
 true
