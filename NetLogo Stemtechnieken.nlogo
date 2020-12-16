@@ -277,35 +277,38 @@ to test_plurarity
     if strat = False [
     let vote min-one-of leiders [distance myself]
     let kleur green
-    ask vote [
-      set volgers volgers + 1
-      set kleur color
-    ]
-    set color kleur
+      ask vote [
+        set kleur color
+        set volgers volgers + 1
+      ]
+      set color kleur
+      set approve vote
     ]
   ]
 
   let winner max-one-of leiders [volgers]
+  show winner
   let loser min-one-of leiders [volgers]
+  show loser
+
+  ask leiders [
+    set volgers 0
+  ]
 
   ask stemmers [
     if strat = True [
-      ifelse min-one-of leiders [distance myself] != winner [
+      ifelse approve != winner [
 
-        ask min-one-of leiders [distance myself] [
-          set volgers volgers - 1
-        ]
 
-        let favoriet min-one-of leiders [distance myself]
-        let nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
+        let nieuwe_keus item 0 remove approve [self] of min-n-of 2 leiders [distance myself]
 
         if nieuwe_keus = loser [
-          set nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
+          set nieuwe_keus item 0 remove approve remove loser [self] of min-n-of 3 leiders [distance myself]
               ]
 
-        let kleur green
-        ask nieuwe_keus [
-          set volgers volgers + 1
+          let kleur green
+          set approve nieuwe_keus
+          ask nieuwe_keus [
           set kleur color
         ]
         set color kleur
@@ -313,12 +316,18 @@ to test_plurarity
       [
           let vote min-one-of leiders [distance myself]
           let kleur green
+        set approve vote
           ask vote [
-            set volgers volgers + 1
             set kleur color
           ]
           set color kleur
       ]
+    ]
+  ]
+
+  ask stemmers [
+    ask approve [
+      set volgers volgers + 1
     ]
   ]
 
@@ -327,6 +336,14 @@ to test_plurarity
   ]
 
   let een max-n-of 2 leiders [volgers]
+
+  foreach sort een [
+    x -> show x
+  ]
+
+  ask leiders [
+    set volgers 0
+  ]
 
   ask stemmers [
     set gewisseld False
@@ -338,16 +355,6 @@ to test_plurarity
     ]
     set color kleur
   ]
-
-  ask leiders [
-    show volgers
-    set volgers 0
-  ]
-
-
-
-
-
 
   let amount voters * strategisch / 100
   let StrategischeStemmers n-of amount stemmers
@@ -503,7 +510,7 @@ Strategisch
 Strategisch
 0
 100
-52.0
+20.0
 1
 1
 NIL
