@@ -1,12 +1,14 @@
 breed [leiders leider]
 breed [stemmers stemmer]
 
-stemmers-own [approve]
+stemmers-own [approve strat]
 leiders-own [volgers nearest_neighbor]
 
 to setup
   ca
   reset-ticks
+
+  let amount voters * strategisch / 100
 
   ;; Creër voters
   create-stemmers voters
@@ -15,6 +17,14 @@ to setup
     set color white
     set size 2
     set shape "person"
+    set strat False
+  ]
+
+
+  let StrategischeStemmers n-of amount turtles
+  ask StrategischeStemmers [
+    set color grey
+    set strat True
   ]
 
   let kleur (list orange blue green yellow brown)
@@ -44,17 +54,16 @@ to setup
   ]
 
   ask patches [if pxcor = 0 [
-    show "whatdown"
     set pcolor 7.0
     ]
   ]
 
   ask patches [if pycor = 0 [
-    show "whatup"
     set pcolor 7.0
     ]
   ]
 end
+
 
 
 to plurarity
@@ -109,7 +118,6 @@ to instant_runoff
     let voter min-one-of leiders [distance myself]
     set approve voter
     if approve = min-one-of leiders [volgers] [
-      show "lol"
       set approve vote
     ]
 
@@ -139,7 +147,7 @@ to approval
   ]
   ask stemmers [
     let amount count link-neighbors
-    if amount = 3 [
+    if amount = count leiders [
       ask link-with max-one-of leiders [distance myself] [die]
       ]
     ]
@@ -147,6 +155,75 @@ to approval
     show count link-neighbors
   ]
 end
+
+
+to test_plurarity
+  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
+  ask links [
+    die
+  ]
+
+  ask stemmers [
+    if strat = False [
+    let vote min-one-of leiders [distance myself]
+    let kleur green
+    ask vote [
+      set volgers volgers + 1
+      set kleur color
+    ]
+    set color kleur
+    ]
+  ]
+
+  let loser min-one-of leiders [volgers]
+
+
+  ask stemmers [
+    if strat = True [
+      ifelse min-one-of leiders [distance myself] = loser [
+        ask loser [
+          set volgers volgers - 1
+        ]
+        let nieuwe_keus item 0 remove loser [self] of min-n-of 2 leiders [distance myself]
+
+        let kleur green
+        ask nieuwe_keus [
+        set volgers volgers + 1
+        set kleur color
+      ]
+      set color kleur
+    ]
+
+       [
+          let vote min-one-of leiders [distance myself]
+          let kleur green
+          ask vote [
+            set volgers volgers + 1
+            set kleur color
+          ]
+          set color kleur
+        ]
+      ]
+  ]
+
+  ask leiders [
+    show volgers
+    set volgers 0
+  ]
+end
+
+
+to test
+  let les [1 2 3 4]
+  foreach les [
+    x -> if x = 3 [show x]]
+end
+
+
+
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 247
@@ -265,13 +342,62 @@ SLIDER
 235
 leaders
 leaders
-0
+3
 5
 3.0
 1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+54
+500
+226
+533
+Strategisch
+Strategisch
+0
+100
+30.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+55
+569
+173
+602
+NIL
+test_plurarity
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+80
+666
+143
+699
+NIL
+test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
