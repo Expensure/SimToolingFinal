@@ -5,6 +5,7 @@ stemmers-own [approve strat gewisseld]
 leiders-own [volgers nearest_neighbor]
 
 to setup
+  show "----------------------------------"
   ca
   reset-ticks
 
@@ -69,6 +70,7 @@ end
 
 to plurarity
   ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
+
   ask links [
     die
   ]
@@ -88,6 +90,7 @@ to plurarity
     show volgers
     set volgers 0
   ]
+  show "++++++++++++++++++++++++"
 end
 
 
@@ -289,7 +292,7 @@ to test_plurarity
     if strat = True [
       ifelse min-one-of leiders [distance myself] != winner [
 
-        ask winner [
+        ask min-one-of leiders [distance myself] [
           set volgers volgers - 1
         ]
 
@@ -321,7 +324,6 @@ to test_plurarity
 
   ask leiders [
     show volgers
-    set volgers 0
   ]
 
   let een max-n-of 2 leiders [volgers]
@@ -501,7 +503,7 @@ Strategisch
 Strategisch
 0
 100
-30.0
+52.0
 1
 1
 NIL
