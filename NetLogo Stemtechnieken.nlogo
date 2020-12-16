@@ -1,7 +1,7 @@
 breed [leiders leider]
 breed [stemmers stemmer]
 
-stemmers-own [approve strat]
+stemmers-own [approve strat gewisseld]
 leiders-own [volgers nearest_neighbor]
 
 to setup
@@ -18,6 +18,7 @@ to setup
     set size 2
     set shape "person"
     set strat False
+    set gewisseld False
   ]
 
 
@@ -73,6 +74,7 @@ to plurarity
   ]
 
   ask stemmers [
+    set gewisseld False
     let vote min-one-of leiders [distance myself]
     let kleur green
     ask vote [
@@ -157,6 +159,111 @@ to approval
 end
 
 
+to test_plurarit
+  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
+  ask links [
+    die
+  ]
+
+  ask stemmers [
+    if strat = False [
+    let vote min-one-of leiders [distance myself]
+    let kleur green
+    ask vote [
+      set volgers volgers + 1
+      set kleur color
+    ]
+    set color kleur
+    ]
+  ]
+
+  let winner max-one-of leiders [volgers]
+  let loser min-one-of leiders [volgers]
+  let in_the_race remove loser [self] of leiders with [voters > 0]
+
+  if length in_the_race != 1 [
+    ask stemmers [
+      if strat = True [
+        ifelse min-one-of leiders [distance myself] != winner [
+
+          ask winner [
+            set volgers volgers - 1
+          ]
+
+
+
+
+          let favoriet min-one-of leiders [distance myself]
+          let nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 in_the_race [distance myself]
+
+
+
+          if nieuwe_keus = loser [
+            set nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
+                ]
+
+
+
+
+
+
+            let kleur green
+            ask nieuwe_keus [
+              set volgers volgers + 1
+              set kleur color
+            ]
+            set color kleur
+        ]
+        [
+            let vote min-one-of leiders [distance myself]
+            let kleur green
+            ask vote [
+              set volgers volgers + 1
+              set kleur color
+            ]
+            set color kleur
+          ]
+        ]
+      ]
+    ]
+
+
+
+
+
+  ask leiders [
+    show volgers
+    set volgers 0
+  ]
+
+  ask stemmers [
+    if strat = True [
+      set strat False
+    ]
+  ]
+
+
+  let amount voters * strategisch / 100
+  let StrategischeStemmers n-of amount stemmers
+  ask StrategischeStemmers [
+    set strat True
+    ]
+
+end
+
+
+
+
+to test
+
+
+end
+
+
+
+
+
+
 to test_plurarity
   ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
   ask links [
@@ -175,26 +282,32 @@ to test_plurarity
     ]
   ]
 
+  let winner max-one-of leiders [volgers]
   let loser min-one-of leiders [volgers]
-
 
   ask stemmers [
     if strat = True [
-      ifelse min-one-of leiders [distance myself] = loser [
-        ask loser [
+      ifelse min-one-of leiders [distance myself] != winner [
+
+        ask winner [
           set volgers volgers - 1
         ]
-        let nieuwe_keus item 0 remove loser [self] of min-n-of 2 leiders [distance myself]
+
+        let favoriet min-one-of leiders [distance myself]
+        let nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
+
+        if nieuwe_keus = loser [
+          set nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
+              ]
 
         let kleur green
         ask nieuwe_keus [
-        set volgers volgers + 1
-        set kleur color
+          set volgers volgers + 1
+          set kleur color
+        ]
+        set color kleur
       ]
-      set color kleur
-    ]
-
-       [
+      [
           let vote min-one-of leiders [distance myself]
           let kleur green
           ask vote [
@@ -202,22 +315,51 @@ to test_plurarity
             set kleur color
           ]
           set color kleur
-        ]
       ]
+    ]
   ]
 
   ask leiders [
     show volgers
     set volgers 0
   ]
+
+  let een max-n-of 2 leiders [volgers]
+
+  ask stemmers [
+    set gewisseld False
+    let vote min-one-of een [distance myself]
+    let kleur green
+    ask vote [
+      set volgers volgers + 1
+      set kleur color
+    ]
+    set color kleur
+  ]
+
+  ask leiders [
+    show volgers
+    set volgers 0
+  ]
+
+
+
+
+
+
+  let amount voters * strategisch / 100
+  let StrategischeStemmers n-of amount stemmers
+  ask StrategischeStemmers [
+    set strat True
+    ]
+
 end
 
 
-to test
-  let les [1 2 3 4]
-  foreach les [
-    x -> if x = 3 [show x]]
-end
+
+
+
+
 
 
 
@@ -344,7 +486,7 @@ leaders
 leaders
 3
 5
-3.0
+5.0
 1
 1
 NIL
