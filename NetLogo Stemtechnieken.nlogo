@@ -1,7 +1,7 @@
 breed [leiders leider]
 breed [stemmers stemmer]
 
-stemmers-own [approve strat gewisseld]
+stemmers-own [approve strat]
 leiders-own [volgers nearest_neighbor]
 
 to setup
@@ -19,7 +19,6 @@ to setup
     set size 2
     set shape "person"
     set strat False
-    set gewisseld False
   ]
 
 
@@ -76,7 +75,6 @@ to plurarity
   ]
 
   ask stemmers [
-    set gewisseld False
     let vote min-one-of leiders [distance myself]
     let kleur green
     ask vote [
@@ -148,7 +146,7 @@ to approval
   ]
 
   ask stemmers [
-    create-links-with leiders in-radius 20
+    create-links-with leiders in-radius 30
   ]
   ask stemmers [
     let amount count link-neighbors
@@ -162,103 +160,10 @@ to approval
 end
 
 
-to test_plurarit
-  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
-  ask links [
-    die
-  ]
-
-  ask stemmers [
-    if strat = False [
-    let vote min-one-of leiders [distance myself]
-    let kleur green
-    ask vote [
-      set volgers volgers + 1
-      set kleur color
-    ]
-    set color kleur
-    ]
-  ]
-
-  let winner max-one-of leiders [volgers]
-  let loser min-one-of leiders [volgers]
-  let in_the_race remove loser [self] of leiders with [voters > 0]
-
-  if length in_the_race != 1 [
-    ask stemmers [
-      if strat = True [
-        ifelse min-one-of leiders [distance myself] != winner [
-
-          ask winner [
-            set volgers volgers - 1
-          ]
-
-
-
-
-          let favoriet min-one-of leiders [distance myself]
-          let nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 in_the_race [distance myself]
-
-
-
-          if nieuwe_keus = loser [
-            set nieuwe_keus item 0 remove favoriet [self] of min-n-of 2 leiders [distance myself]
-                ]
-
-
-
-
-
-
-            let kleur green
-            ask nieuwe_keus [
-              set volgers volgers + 1
-              set kleur color
-            ]
-            set color kleur
-        ]
-        [
-            let vote min-one-of leiders [distance myself]
-            let kleur green
-            ask vote [
-              set volgers volgers + 1
-              set kleur color
-            ]
-            set color kleur
-          ]
-        ]
-      ]
-    ]
-
-
-
-
-
-  ask leiders [
-    show volgers
-    set volgers 0
-  ]
-
-  ask stemmers [
-    if strat = True [
-      set strat False
-    ]
-  ]
-
-
-  let amount voters * strategisch / 100
-  let StrategischeStemmers n-of amount stemmers
-  ask StrategischeStemmers [
-    set strat True
-    ]
-
-end
-
 
 
 
 to test
-
 
 end
 
@@ -268,11 +173,12 @@ end
 
 
 to test_plurarity
-  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
+  ;; Voor de zekerheid laten we alle links doodgaan. Het kan zijn dat we net approval hebben gerunt en dan zijn deze link niet meer nodig maar ook verwarrend.
   ask links [
     die
   ]
 
+  ;; Vraag aan de stemmers welke partijleider het dichtsbij van het zit. En verander dan hun kleur hiernaar.
   ask stemmers [
     if strat = False [
     let vote min-one-of leiders [distance myself]
@@ -286,67 +192,59 @@ to test_plurarity
     ]
   ]
 
+  ;; Wat is de meest winnende en de meest verliezende partij?
   let winner max-one-of leiders [volgers]
-  show winner
   let loser min-one-of leiders [volgers]
-  show loser
 
   ask leiders [
     set volgers 0
   ]
 
   ask stemmers [
+    ;; Als de stemmer strategisch wil gaan stemmen dan gaat hij dit pad af.
     if strat = True [
-      ifelse approve != winner [
-
-
+      ;; Als degene waar je op stemt aan het winnen is, wil je niet van favoriet wisselen.
+      if approve != winner [
+        ;; Wat is je tweede keus?
         let nieuwe_keus item 0 remove approve [self] of min-n-of 2 leiders [distance myself]
 
+        ;; Je wil niet stemmen op een verliezende partij, dus pak je dan de partij die je derde favoriet is.
         if nieuwe_keus = loser [
           set nieuwe_keus item 0 remove approve remove loser [self] of min-n-of 3 leiders [distance myself]
               ]
 
-          let kleur green
-          set approve nieuwe_keus
-          ask nieuwe_keus [
-          set kleur color
+        ;; Vote op je nieuwe keuze. Verander ook je kleur voor de visualisatie.
+        let kleur green
+        set approve nieuwe_keus
+        ask nieuwe_keus [
+        set kleur color
         ]
         set color kleur
-      ]
-      [
-          let vote min-one-of leiders [distance myself]
-          let kleur green
-        set approve vote
-          ask vote [
-            set kleur color
-          ]
-          set color kleur
       ]
     ]
   ]
 
+  ;; Kijk opnieuw hoeveel stemmen elke partij heeft.
   ask stemmers [
     ask approve [
       set volgers volgers + 1
     ]
   ]
 
+  ;; Hoeveel stemmen heeft elke partij.
   ask leiders [
     show volgers
   ]
 
+  ;; Nadat de strategische stemmers hun vote hebben veranderd, gaan we kijken wat de twee grootste partijen zijn.
   let een max-n-of 2 leiders [volgers]
-
-  foreach sort een [
-    x -> show x
-  ]
 
   ask leiders [
     set volgers 0
   ]
 
+  ;; En nu vragen we aan alle stemmers welke van deze twee partijen zij het lieft zouden willen kiezen. Dit zal dan de winnaar worden.
   ask stemmers [
-    set gewisseld False
     let vote min-one-of een [distance myself]
     let kleur green
     ask vote [
@@ -355,15 +253,58 @@ to test_plurarity
     ]
     set color kleur
   ]
-
-  let amount voters * strategisch / 100
-  let StrategischeStemmers n-of amount stemmers
-  ask StrategischeStemmers [
-    set strat True
-    ]
-
 end
 
+
+
+to test_approval
+  ;; Hier zullen voters aangeven welke leider dichtbij genoeg hun views zitten om op te stemmen, dit kunnen dus meerdere leiders zijn. De leider die het meest approved is, wint.
+  ;; Als een voter approved op alle leiders, zal hij niet meer approven op de leider die het minst op hem lijkt. Dit geeft zijn andere favoriete leiders een hogere kans om te winnen.
+  ask stemmers [
+    set color white
+  ]
+
+  ask stemmers [
+    create-links-with leiders in-radius 25
+    if strat = True [
+      set approve min-one-of leiders [distance myself]
+    ]
+  ]
+
+  ask stemmers [
+    if strat = True [
+      let amount count link-neighbors
+      if amount = count leiders [
+        ask link-with max-one-of leiders [distance myself] [die]
+        ]
+      ]
+    ]
+
+  let winner 0
+  let loser 0
+
+  ask stemmers [
+    if strat = True [
+      set winner max-one-of leiders [count link-neighbors]
+      set loser min-one-of leiders [count link-neighbors]
+      if approve != winner and approve != loser [
+        if link-neighbor? winner [
+          let votes 0
+          ask winner [
+            set votes count link-neighbors - 1
+          ]
+          if votes < count link-neighbors [
+
+          ]
+        ]
+      ]
+    ]
+  ]
+
+  ask leiders [
+    show count link-neighbors
+  ]
+end
 
 
 
@@ -438,27 +379,10 @@ NIL
 1
 
 BUTTON
-49
-354
-172
-387
-NIL
-instant_runoff
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-68
-430
-156
-463
+61
+365
+149
+398
 NIL
 approval
 NIL
@@ -502,10 +426,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-54
-500
-226
-533
+47
+435
+219
+468
 Strategisch
 Strategisch
 0
@@ -517,10 +441,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-55
-569
-173
-602
+48
+504
+166
+537
 NIL
 test_plurarity
 NIL
@@ -534,12 +458,29 @@ NIL
 1
 
 BUTTON
-80
-666
-143
-699
+74
+632
+137
+665
 NIL
 test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+46
+572
+166
+605
+NIL
+test_approval
 NIL
 1
 T
