@@ -1,3 +1,5 @@
+globals [ eerste_winnaar tweede_winnaar ]
+
 breed [leiders leider]
 breed [stemmers stemmer]
 
@@ -5,7 +7,6 @@ stemmers-own [approve strat]
 leiders-own [volgers nearest_neighbor]
 
 to setup
-  show "----------------------------------"
   ca
   reset-ticks
 
@@ -67,29 +68,6 @@ end
 
 
 
-to plurarity
-  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
-
-  ask links [
-    die
-  ]
-
-  ask stemmers [
-    let vote min-one-of leiders [distance myself]
-    let kleur green
-    ask vote [
-      set volgers volgers + 1
-      set kleur color
-    ]
-    set color kleur
-  ]
-
-  ask leiders [
-    show volgers
-    set volgers 0
-  ]
-  show "++++++++++++++++++++++++"
-end
 
 
 to instant_runoff
@@ -160,37 +138,90 @@ to approval
 end
 
 
+to link_die
+  ask links [
+    die
+  ]
+end
 
 
+to reset
+  ;; Reset
+   ask leiders [
+    show volgers
+    set volgers 0
+  ]
+end
 
-to test
+to plurarity_voting
+  ;; Plurarity voting. Welke mensen zitten het meest dichtbij mij.
+  ask stemmers [
+    let vote min-one-of leiders [distance myself]
+    let kleur green
+    ask vote [
+      set volgers volgers + 1
+      set kleur color
+    ]
+    set color kleur
+    set approve vote
+  ]
+end
 
+to grootste_partijen
+  ;; Van de twee grootste partijen. Welke van de twee zouden de stemmers het liefst hebben.
+  let een max-n-of 2 leiders [volgers]
+
+  ask leiders [
+    set volgers 0
+  ]
+
+  ;; En nu vragen we aan alle stemmers welke van deze twee partijen zij het lieft zouden willen kiezen. Dit zal dan de winnaar worden.
+  ask stemmers [
+    let vote min-one-of een [distance myself]
+    let kleur green
+    ask vote [
+      set volgers volgers + 1
+      set kleur color
+    ]
+    set color kleur
+  ]
+
+end
+
+
+to plurarity
+  ;; De voters stemmen op de leider die het meest op hen lijkt, qua politieke view.
+  link_die
+
+  plurarity_voting
+
+  grootste_partijen
+  set eerste_winnaar max-one-of leiders [volgers]
+
+  reset
+  tick
 end
 
 
 
 
 
+to-report plur
+  ifelse (eerste_winnaar != tweede_winnaar) [report "True" ][report "False"]
+end
 
-to test_plurarity
-  ;; Voor de zekerheid laten we alle links doodgaan. Het kan zijn dat we net approval hebben gerunt en dan zijn deze link niet meer nodig maar ook verwarrend.
-  ask links [
-    die
-  ]
+to pler
+  plurarity
+  strategisch_plurarity
+  ifelse (eerste_winnaar != tweede_winnaar) [show "True" ][show "False"]
+end
 
-  ;; Vraag aan de stemmers welke partijleider het dichtsbij van het zit. En verander dan hun kleur hiernaar.
-  ask stemmers [
-    if strat = False [
-    let vote min-one-of leiders [distance myself]
-    let kleur green
-      ask vote [
-        set kleur color
-        set volgers volgers + 1
-      ]
-      set color kleur
-      set approve vote
-    ]
-  ]
+
+
+to plurarity_strategisch_voting
+  ;; De niet strategische mensen stemmen op de persoon die zij het leukst vinden. Wel strategische mensen zullen stemmen
+  ;; (wanneer hun favoriet niet de winnende partij is) op hun tweede favoriet. Vervolgens kijken we welke twee partijen het grootst
+  ;; zijn en dan runnen we de votes nog een keer alleen voor deze twee partijen. De grootste partij wint.
 
   ;; Wat is de meest winnende en de meest verliezende partij?
   let winner max-one-of leiders [volgers]
@@ -223,6 +254,17 @@ to test_plurarity
       ]
     ]
   ]
+end
+
+
+to strategisch_plurarity
+  ;; Voor de zekerheid laten we alle links doodgaan. Het kan zijn dat we net approval hebben gerunt en dan zijn deze link niet meer nodig maar ook verwarrend.
+  link_die
+
+  ;; Vraag aan de stemmers welke partijleider het dichtsbij van het zit. En verander dan hun kleur hiernaar.
+  plurarity_voting
+
+  plurarity_strategisch_voting
 
   ;; Kijk opnieuw hoeveel stemmen elke partij heeft.
   ask stemmers [
@@ -236,23 +278,8 @@ to test_plurarity
     show volgers
   ]
 
-  ;; Nadat de strategische stemmers hun vote hebben veranderd, gaan we kijken wat de twee grootste partijen zijn.
-  let een max-n-of 2 leiders [volgers]
-
-  ask leiders [
-    set volgers 0
-  ]
-
-  ;; En nu vragen we aan alle stemmers welke van deze twee partijen zij het lieft zouden willen kiezen. Dit zal dan de winnaar worden.
-  ask stemmers [
-    let vote min-one-of een [distance myself]
-    let kleur green
-    ask vote [
-      set volgers volgers + 1
-      set kleur color
-    ]
-    set color kleur
-  ]
+  grootste_partijen
+  set tweede_winnaar max-one-of leiders [volgers]
 end
 
 
@@ -289,23 +316,29 @@ to test_approval
       set loser min-one-of leiders [count link-neighbors]
       if approve != winner and approve != loser [
         if link-neighbor? winner [
+
+
           let votes 0
+
+
+
+
           ask winner [
             set votes count link-neighbors - 1
           ]
           if votes < count link-neighbors [
 
           ]
+          ]
         ]
       ]
     ]
-  ]
+
 
   ask leiders [
     show count link-neighbors
   ]
 end
-
 
 
 
@@ -363,28 +396,11 @@ NIL
 
 BUTTON
 68
-283
+272
 154
-316
+305
 NIL
 plurarity
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-61
-365
-149
-398
-NIL
-approval
 NIL
 1
 T
@@ -426,44 +442,27 @@ NIL
 HORIZONTAL
 
 SLIDER
-47
-435
-219
-468
+34
+379
+206
+412
 Strategisch
 Strategisch
 0
 100
-20.0
+100.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-48
-504
-166
-537
+35
+452
+200
+485
 NIL
-test_plurarity
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-74
-632
-137
-665
-NIL
-test
+strategisch_plurarity
 NIL
 1
 T
@@ -475,12 +474,12 @@ NIL
 1
 
 BUTTON
-46
-572
-166
-605
+52
+324
+185
+357
 NIL
-test_approval
+plurarity_voting 
 NIL
 1
 T
@@ -819,6 +818,38 @@ NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>plurarity</go>
+    <timeLimit steps="1"/>
+    <metric>plur</metric>
+    <enumeratedValueSet variable="Strategisch">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="leaders">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="voters">
+      <value value="100"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="1"/>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="Strategisch">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="leaders">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="voters">
+      <value value="100"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
