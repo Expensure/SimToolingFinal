@@ -10,6 +10,7 @@ to setup
   ca
   reset-ticks
 
+  ;; Hoeveel stemmers zijn strategisch.
   let amount voters * strategisch / 100
 
   ;; Creër voters
@@ -23,6 +24,7 @@ to setup
   ]
 
 
+  ;; Maak van een bepaalde hoeveelheid stemmers strategische stemmers.
   let StrategischeStemmers n-of amount turtles
   ask StrategischeStemmers [
     set color grey
@@ -67,77 +69,6 @@ to setup
 end
 
 
-
-
-
-to instant_runoff
-  ;; Deze strategie doet hetzelfde als de plurariteit. Maar wanneer blijkt dat een de leider met de laagste votes niet gaat winnen, stappen zijn voters over naar hun tweede favoriete keus.
-  ask links [
-    die
-  ]
-
-  ask stemmers [
-    ask min-one-of leiders [distance myself] [
-      set volgers volgers + 1
-    ]
-  ]
-
-  let vote 0
-  let kleur green
-
-  ask min-one-of leiders [volgers] [
-    let lowest volgers
-    set vote nearest_neighbor
-    ask vote [
-      set volgers volgers + lowest
-      set kleur color
-    ]
-    set volgers 0
-  ]
-
-  ask stemmers [
-    let voter min-one-of leiders [distance myself]
-    set approve voter
-    if approve = min-one-of leiders [volgers] [
-      set approve vote
-    ]
-
-    ask approve [
-      set kleur color
-    ]
-
-    set color kleur
-  ]
-
-  ask leiders [
-    show volgers
-    set volgers 0
-  ]
-end
-
-
-to approval
-  ;; Hier zullen voters aangeven welke leider dichtbij genoeg hun views zitten om op te stemmen, dit kunnen dus meerdere leiders zijn. De leider die het meest approved is, wint.
-  ;; Als een voter approved op alle leiders, zal hij niet meer approven op de leider die het minst op hem lijkt. Dit geeft zijn andere favoriete leiders een hogere kans om te winnen.
-  ask stemmers [
-    set color white
-  ]
-
-  ask stemmers [
-    create-links-with leiders in-radius 30
-  ]
-  ask stemmers [
-    let amount count link-neighbors
-    if amount = count leiders [
-      ask link-with max-one-of leiders [distance myself] [die]
-      ]
-    ]
-  ask leiders [
-    show count link-neighbors
-  ]
-end
-
-
 to link_die
   ask links [
     die
@@ -146,12 +77,11 @@ end
 
 
 to reset
-  ;; Reset
-   ask leiders [
-    show volgers
+  ask leiders [
     set volgers 0
   ]
 end
+
 
 to plurarity_voting
   ;; Plurarity voting. Welke mensen zitten het meest dichtbij mij.
@@ -166,6 +96,7 @@ to plurarity_voting
     set approve vote
   ]
 end
+
 
 to grootste_partijen
   ;; Van de twee grootste partijen. Welke van de twee zouden de stemmers het liefst hebben.
@@ -203,19 +134,12 @@ to plurarity
 end
 
 
-
-
-
-to-report plur
-  ifelse (eerste_winnaar != tweede_winnaar) [report "True" ][report "False"]
-end
-
-to pler
+to plur_result
+  ;; Deze definitie gebruikten we voor de resultaten. We kijken hier of er een verschil is in uiteindelijke winnaar wanneer we eerst normale plurariteit inplementeren en daarna strategische plurariteit (dat de mensen strategisch mogen stemmen).
   plurarity
   strategisch_plurarity
   ifelse (eerste_winnaar != tweede_winnaar) [show "True" ][show "False"]
 end
-
 
 
 to plurarity_strategisch_voting
@@ -264,6 +188,7 @@ to strategisch_plurarity
   ;; Vraag aan de stemmers welke partijleider het dichtsbij van het zit. En verander dan hun kleur hiernaar.
   plurarity_voting
 
+  ;; Laat de strategische stemmers van vote wisselen als ze dat willen.
   plurarity_strategisch_voting
 
   ;; Kijk opnieuw hoeveel stemmen elke partij heeft.
@@ -280,75 +205,9 @@ to strategisch_plurarity
 
   grootste_partijen
   set tweede_winnaar max-one-of leiders [volgers]
+
+  reset
 end
-
-
-
-to test_approval
-  ;; Hier zullen voters aangeven welke leider dichtbij genoeg hun views zitten om op te stemmen, dit kunnen dus meerdere leiders zijn. De leider die het meest approved is, wint.
-  ;; Als een voter approved op alle leiders, zal hij niet meer approven op de leider die het minst op hem lijkt. Dit geeft zijn andere favoriete leiders een hogere kans om te winnen.
-  ask stemmers [
-    set color white
-  ]
-
-  ask stemmers [
-    create-links-with leiders in-radius 25
-    if strat = True [
-      set approve min-one-of leiders [distance myself]
-    ]
-  ]
-
-  ask stemmers [
-    if strat = True [
-      let amount count link-neighbors
-      if amount = count leiders [
-        ask link-with max-one-of leiders [distance myself] [die]
-        ]
-      ]
-    ]
-
-  let winner 0
-  let loser 0
-
-  ask stemmers [
-    if strat = True [
-      set winner max-one-of leiders [count link-neighbors]
-      set loser min-one-of leiders [count link-neighbors]
-      if approve != winner and approve != loser [
-        if link-neighbor? winner [
-
-
-          let votes 0
-
-
-
-
-          ask winner [
-            set votes count link-neighbors - 1
-          ]
-          if votes < count link-neighbors [
-
-          ]
-          ]
-        ]
-      ]
-    ]
-
-
-  ask leiders [
-    show count link-neighbors
-  ]
-end
-
-
-
-
-
-
-
-
-
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 247
@@ -395,10 +254,10 @@ NIL
 1
 
 BUTTON
-68
-272
-154
-305
+61
+408
+147
+441
 NIL
 plurarity
 NIL
@@ -442,25 +301,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-34
-379
-206
-412
+22
+341
+194
+374
 Strategisch
 Strategisch
 0
 100
-100.0
+32.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-35
-452
-200
-485
+22
+457
+187
+490
 NIL
 strategisch_plurarity
 NIL
@@ -474,10 +333,10 @@ NIL
 1
 
 BUTTON
-52
-324
-185
-357
+38
+274
+171
+307
 NIL
 plurarity_voting 
 NIL
